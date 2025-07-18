@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>图片专用版导出</title>
+    <title>图片内容编辑器</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -97,6 +97,26 @@
         }
         .button-primary:active {
             background-color: #4338ca; /* Indigo-700 */
+            transform: translateY(0);
+        }
+        .button-secondary { /* Style for the new clear button */
+            background-color: #ef4444; /* Red-500 */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            border: none;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            margin-top: 0.5rem; /* Space from other buttons */
+        }
+        .button-secondary:hover {
+            background-color: #dc2626; /* Red-600 */
+            transform: translateY(-1px);
+        }
+        .button-secondary:active {
+            background-color: #b91c1c; /* Red-700 */
             transform: translateY(0);
         }
         canvas {
@@ -326,6 +346,7 @@
             </details>
 
             <button id="exportButton" class="button-primary mt-4">导出图片</button>
+            <button id="clearImagesButton" class="button-secondary">清除已导入图片</button> <!-- New button -->
         </div>
 
         <!-- Canvas Container -->
@@ -355,7 +376,7 @@
             officialPrice: { value: '6930JPY', x: 75, y: 460, fontSize: 30, color: '#000000' },
             material: { value: '亚克力', x: 75, y: 570, fontSize: 30, color: '#000000' },
             shippingTime: { value: '25年9-10月', x: 75, y: 680, fontSize: 30, color: '#000000' },
-            pendantText: { value: '挂件', x: 485, y: 615, fontSize: 35, color: '#2983e2' }
+            pendantText: { value: '挂件', x: 485, y: 615, fontSize: 35, color: '#000000' }
         };
 
         // 尝试从 localStorage 加载保存的文本设置，并与默认值合并。
@@ -379,39 +400,41 @@
         // 定义图片区域的默认初始值。这些值是“锁定”的，不会被用户操作直接修改。
         // 用户在界面上的更改会保存在 localStorage 中，并在下次加载时覆盖这些默认值。
         const defaultImageAreas = {
-            imageArea1: { img: null, x: 359, y: 285, width: 312, height: 275 },
-            imageArea2: { img: null, x: 55, y: 1051, width: 646, height: 590 }
+            imageArea1: { img: null, x: 386, y: 265, width: 250, height: 288 },
+            imageArea2: { img: null, x: 122, y: 1051, width: 500, height: 581 }
         };
 
         // 尝试从 localStorage 加载保存的图片区域属性，并与默认值合并。
         // 如果 localStorage 中没有数据，则使用默认值。
         let currentReplaceableImages = {};
-        try {
-            const storedImageAreas = localStorage.getItem('imageEditorImageAreas');
-            if (storedImageAreas) {
-                const parsedImageAreas = JSON.parse(storedImageAreas);
-                for (const key in defaultImageAreas) {
-                    currentReplaceableImages[key] = { ...defaultImageAreas[key], ...(parsedImageAreas[key] || {}) };
-                    // 如果存在保存的图片 URL，则加载它
-                    if (parsedImageAreas[key] && parsedImageAreas[key].imgSrc) {
-                        const img = new Image();
-                        img.onload = () => {
-                            currentReplaceableImages[key].img = img;
-                            drawCanvas();
-                        };
-                        img.onerror = () => {
-                            console.error(`Failed to load saved image for ${key} from localStorage.`);
-                        };
-                        img.src = parsedImageAreas[key].imgSrc;
+        function loadReplaceableImagesFromLocalStorage() {
+            try {
+                const storedImageAreas = localStorage.getItem('imageEditorImageAreas');
+                if (storedImageAreas) {
+                    const parsedImageAreas = JSON.parse(storedImageAreas);
+                    for (const key in defaultImageAreas) {
+                        currentReplaceableImages[key] = { ...defaultImageAreas[key], ...(parsedImageAreas[key] || {}) };
+                        if (parsedImageAreas[key] && parsedImageAreas[key].imgSrc) {
+                            const img = new Image();
+                            img.onload = () => {
+                                currentReplaceableImages[key].img = img;
+                                drawCanvas();
+                            };
+                            img.onerror = () => {
+                                console.error(`Failed to load saved image for ${key} from localStorage.`);
+                            };
+                            img.src = parsedImageAreas[key].imgSrc;
+                        }
                     }
+                } else {
+                    currentReplaceableImages = { ...defaultImageAreas }; // Use defaults if nothing in localStorage
                 }
-            } else {
-                currentReplaceableImages = { ...defaultImageAreas }; // Use defaults if nothing in localStorage
+            } catch (e) {
+                console.error("Error parsing saved image areas from localStorage, using defaults:", e);
+                currentReplaceableImages = { ...defaultImageAreas };
             }
-        } catch (e) {
-            console.error("Error parsing saved image areas from localStorage, using defaults:", e);
-            currentReplaceableImages = { ...defaultImageAreas };
         }
+        loadReplaceableImagesFromLocalStorage(); // Initial load
 
 
         /**
@@ -671,6 +694,19 @@
             }
         }
 
+        /**
+         * Clears all stored replaceable image data from localStorage and resets the canvas.
+         */
+        function clearImportedImages() {
+            if (confirm('确定要清除所有已导入的图片吗？这将无法撤销。')) { // Using confirm for simplicity
+                localStorage.removeItem('imageEditorImageAreas');
+                currentReplaceableImages = { ...defaultImageAreas }; // Reset to default empty state
+                initializeInputValues(); // Update UI input fields
+                drawCanvas(); // Redraw canvas to reflect changes
+                alert('已清除所有已导入图片。');
+            }
+        }
+
 
         // --- Event Listeners ---
         document.getElementById('baseImageUpload').addEventListener('change', handleBaseImageUpload);
@@ -720,34 +756,18 @@
         document.getElementById('imageArea2Height').addEventListener('input', (e) => handleImageAreaInput(e, 'imageArea2', 'height'));
 
         document.getElementById('exportButton').addEventListener('click', exportImage);
-        document.getElementById('importTextButton').addEventListener('click', handleBulkImportText); // New event listener for import button
+        document.getElementById('importTextButton').addEventListener('click', handleBulkImportText);
+        document.getElementById('clearImagesButton').addEventListener('click', clearImportedImages); // New event listener
+
 
         // --- Initial Load ---
         window.onload = () => {
             initializeInputValues(); // Populate input fields with loaded/default values
 
             // Removed localStorage.getItem for baseImage due to local file security restrictions
-            // const savedBaseImage = localStorage.getItem('imageEditorBaseImage');
-            // if (savedBaseImage) {
-            //     baseImage.onload = () => {
-            //         drawCanvas();
-            //     };
-            //     baseImage.onerror = () => {
-            //         console.error("Failed to load saved base image from localStorage.");
-            //         canvas.width = 900;
-            //         canvas.height = 1000;
-            //         ctx.fillStyle = '#ccc';
-            //         ctx.fillRect(0, 0, canvas.width, canvas.height);
-            //         ctx.fillStyle = 'black';
-            //         ctx.font = '20px Arial';
-            //         ctx.fillText('无法加载保存的底图，请上传底图', 50, 50);
-            //     };
-            //     baseImage.src = savedBaseImage;
-            // } else {
-                drawCanvas(); // Always draw placeholder if no saved image (or if loaded locally)
-                console.log("请通过左侧的 '上传底图' 按钮上传 d33.jpg 或其他图片以开始编辑。");
-                console.log("注意：在本地文件模式下，背景图片不会在刷新后自动保留，需要重新上传。");
-            // }
+            drawCanvas(); // Always draw placeholder if no saved image (or if loaded locally)
+            console.log("请通过左侧的 '上传底图' 按钮上传 d33.jpg 或其他图片以开始编辑。");
+            console.log("注意：在本地文件模式下，背景图片不会在刷新后自动保留，需要重新上传。");
         };
     </script>
 </body>
