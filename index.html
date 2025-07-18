@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>图片内容编辑器</title>
+    <title>图片专用版导出</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -166,6 +166,21 @@
             border-top: 1px solid #cbd5e1;
             margin-top: 0.5rem;
         }
+
+        /* Loading indicator styles */
+        #loadingIndicator {
+            display: none; /* Hidden by default */
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 0.75rem;
+            font-size: 1.25rem;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
@@ -285,13 +300,13 @@
                     <label for="imageArea1Upload">上传图片:</label>
                     <input type="file" id="imageArea1Upload" accept="image/*">
                     <label for="imageArea1X">X 坐标:</label>
-                    <input type="number" id="imageArea1X" value="359">
+                    <input type="number" id="imageArea1X" value="386">
                     <label for="imageArea1Y">Y 坐标:</label>
-                    <input type="number" id="imageArea1Y" value="285">
+                    <input type="number" id="imageArea1Y" value="265">
                     <label for="imageArea1Width">宽度:</label>
-                    <input type="number" id="imageArea1Width" value="312">
+                    <input type="number" id="imageArea1Width" value="250">
                     <label for="imageArea1Height">高度:</label>
-                    <input type="number" id="imageArea1Height" value="275">
+                    <input type="number" id="imageArea1Height" value="288">
                 </div>
             </details>
             <details>
@@ -300,13 +315,13 @@
                     <label for="imageArea2Upload">上传图片:</label>
                     <input type="file" id="imageArea2Upload" accept="image/*">
                     <label for="imageArea2X">X 坐标:</label>
-                    <input type="number" id="imageArea2X" value="55">
+                    <input type="number" id="imageArea2X" value="122">
                     <label for="imageArea2Y">Y 坐标:</label>
                     <input type="number" id="imageArea2Y" value="1051">
                     <label for="imageArea2Width">宽度:</label>
-                    <input type="number" id="imageArea2Width" value="646">
+                    <input type="number" id="imageArea2Width" value="500">
                     <label for="imageArea2Height">高度:</label>
-                    <input type="number" id="imageArea2Height" value="590">
+                    <input type="number" id="imageArea2Height" value="581">
                 </div>
             </details>
 
@@ -319,9 +334,13 @@
         </div>
     </div>
 
+    <!-- Loading Indicator -->
+    <div id="loadingIndicator">正在导出图片...</div>
+
     <script>
         const canvas = document.getElementById('imageCanvas');
         const ctx = canvas.getContext('2d');
+        const loadingIndicator = document.getElementById('loadingIndicator');
 
         // Initial image URL (user's uploaded image) - This will no longer be automatically fetched.
         // Users should upload the base image using the file input.
@@ -360,8 +379,8 @@
         // 定义图片区域的默认初始值。这些值是“锁定”的，不会被用户操作直接修改。
         // 用户在界面上的更改会保存在 localStorage 中，并在下次加载时覆盖这些默认值。
         const defaultImageAreas = {
-            imageArea1: { img: null, x: 359, y: 285, width: 312, height: 275 },
-            imageArea2: { img: null, x: 55, y: 1051, width: 646, height: 590 }
+            imageArea1: { img: null, x: 386, y: 265, width: 250, height: 288 },
+            imageArea2: { img: null, x: 122, y: 1051, width: 500, height: 581 }
         };
 
         // 尝试从 localStorage 加载保存的图片区域属性，并与默认值合并。
@@ -547,13 +566,25 @@
          * Exports the current canvas content as a PNG image.
          */
         function exportImage() {
-            const dataURL = canvas.toDataURL('image/png');
-            const a = document.createElement('a');
-            a.href = dataURL;
-            a.download = 'edited_image.png';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            loadingIndicator.style.display = 'block'; // Show loading indicator
+
+            // Use a short delay to ensure the loading indicator is rendered before heavy processing
+            setTimeout(() => {
+                try {
+                    const dataURL = canvas.toDataURL('image/png');
+                    const a = document.createElement('a');
+                    a.href = dataURL;
+                    a.download = 'edited_image.png';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                } catch (error) {
+                    console.error("Error exporting image:", error);
+                    alert("导出图片时发生错误：" + error.message);
+                } finally {
+                    loadingIndicator.style.display = 'none'; // Hide loading indicator
+                }
+            }, 50); // Small delay
         }
 
         /**
@@ -602,11 +633,7 @@
             // Initialize bulk import textarea with example plain text
             const bulkImportTextarea = document.getElementById('bulkImportText');
             if (bulkImportTextarea) {
-                bulkImportTextarea.value = `产品尺寸内容示例
-官方价格内容示例
-材质内容示例
-预估出荷时间内容示例
-挂件内容示例`;
+                bulkImportTextarea.value = ``;
             }
         }
 
